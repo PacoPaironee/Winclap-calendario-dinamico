@@ -1,0 +1,30 @@
+name: Sync calendario dinámico
+
+on:
+  schedule:
+    # 09:00 UTC = 06:00 America/Argentina/Buenos_Aires (todos los días).
+    - cron: "0 9 * * *"
+  workflow_dispatch: {} # permite dispararlo a mano desde la pestaña Actions
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - run: npm ci
+
+      - name: Escribir credenciales y config (desde secretos)
+        run: |
+          printf '%s' "$GOOGLE_SA_JSON" > service-account.json
+          printf '%s' "$ENV_FILE" > .env
+        env:
+          GOOGLE_SA_JSON: ${{ secrets.GOOGLE_SA_JSON }}
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+
+      - name: Sincronizar
+        run: npm run sync

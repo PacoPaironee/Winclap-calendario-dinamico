@@ -1,0 +1,15 @@
+{
+  "name": "winclap-calendario-dinamico",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Sincroniza cumpleaños y aniversarios de la nómina de Winclap a Google Calendar (un calendario por clapbase).",
+  "scripts": {
+    "sync": "node src/sync.js",
+    "sync:dry": "node src/sync.js --dry-run",
+    "calendars:init": "node src/init-calendars.js"
+  },
+  "dependencies": {
+    "googleapis": "^144.0.0"
+  }
+}
