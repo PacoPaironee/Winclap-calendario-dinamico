@@ -31,44 +31,40 @@ async function conReintento(fn, intentos = 5) {
   }
 }
 
-// Inserta o actualiza un evento usando su id determinístico (idempotente).
-// Inserta primero (1 sola llamada en la corrida inicial); si ya existe, actualiza.
-export async function upsertEvento(calendarId, event) {
+const opts = { timeout: 30000 }; // 30s por request: falla rápido y reintenta
+
+// Crea un evento nuevo (con su id determinístico).
+export async function crearEvento(calendarId, event) {
   const cal = calendarClient();
-  const opts = { timeout: 30000 }; // 30s por request: falla rápido y reintenta
-  return conReintento(async () => {
-    try {
-      await cal.events.insert({ calendarId, requestBody: event }, opts);
-      return "creado";
-    } catch (err) {
-      if (err?.code === 409) {
-        await cal.events.update({ calendarId, eventId: event.id, requestBody: event }, opts);
-        return "actualizado";
-      }
-      throw err;
-    }
-  });
+  await conReintento(() => cal.events.insert({ calendarId, requestBody: event }, opts));
 }
 
-// Lista los eventos que generamos nosotros (los nuestros tienen ids con prefijo
-// 'a' o 'b' seguido de hash). Sirve para borrar los que ya no están en la nómina.
-export async function listarEventosGenerados(calendarId) {
+// Actualiza un evento existente.
+export async function actualizarEvento(calendarId, event) {
   const cal = calendarClient();
-  const ids = [];
+  await conReintento(() => cal.events.update({ calendarId, eventId: event.id, requestBody: event }, opts));
+}
+
+// Lee TODOS los eventos que generamos nosotros (ids con prefijo 'a'/'b' + hash) y
+// los devuelve como Map(id -> evento). Una sola pasada para poder comparar y
+// tocar solo lo que cambió (en vez de reescribir todo).
+export async function leerEventosGenerados(calendarId) {
+  const cal = calendarClient();
+  const mapa = new Map();
   let pageToken;
   do {
     const { data } = await conReintento(() =>
       cal.events.list(
         { calendarId, maxResults: 2500, showDeleted: false, singleEvents: false, pageToken },
-        { timeout: 30000 }
+        opts
       )
     );
     for (const ev of data.items || []) {
-      if (/^[ab][0-9a-f]{40}$/.test(ev.id || "")) ids.push(ev.id);
+      if (/^[ab][0-9a-f]{40}$/.test(ev.id || "")) mapa.set(ev.id, ev);
     }
     pageToken = data.nextPageToken;
   } while (pageToken);
-  return ids;
+  return mapa;
 }
 
 export async function borrarEvento(calendarId, eventId) {
