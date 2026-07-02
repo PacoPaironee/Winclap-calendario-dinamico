@@ -1,37 +1,53 @@
 // Gestiona los permisos de los calendarios.
 //
-//   node src/share.js <email> <rol>        → da acceso a una persona
-//   node src/share.js <email> owner --solo  → además QUITA el acceso público
+//   node src/share.js <email> <rol> [KEY] [--solo] [--notificar]
 //
-// Roles válidos: reader | writer | owner
-//   reader = ver todos los eventos
-//   writer = hacer cambios en los eventos (editor)
-//   owner  = hacer cambios y administrar el uso compartido (admin)
+//   <rol>  : reader | writer | owner
+//     reader = ver todos los eventos
+//     writer = hacer cambios en los eventos (editor)
+//     owner  = hacer cambios y administrar accesos (admin)
+//   [KEY]  : opcional. Si se indica una clapbase (GLOBAL, CORDOBA, BUENOS_AIRES,
+//            MENDOZA, COLOMBIA, BRAZIL, MEXICO) aplica SOLO a ese calendario.
+//            Si se omite, aplica a TODOS.
+//   --solo      : además quita el acceso público (scope "default").
+//   --notificar : manda el mail de "Agregar calendario" a la persona.
+//
+// Ejemplos:
+//   node src/share.js ana@winclap.com writer CORDOBA      → editora solo de Córdoba
+//   node src/share.js ana@winclap.com reader GLOBAL       → lectora del global
+//   node src/share.js franco@winclap.com owner --solo     → owner de todos, sin público
 import { CALENDARIOS, calendarIdFor } from "./config.js";
 import { calendarClient } from "./google.js";
 
-const [, , email, rol = "owner", ...flags] = process.argv;
-const soloYo = flags.includes("--solo"); // quita el acceso público (scope "default")
+const args = process.argv.slice(2);
+const flags = args.filter((a) => a.startsWith("--"));
+const pos = args.filter((a) => !a.startsWith("--"));
+const [email, rol = "reader", key] = pos;
 
-if (!email || !["reader", "writer", "owner"].includes(rol)) {
-  console.error("Uso: node src/share.js <email> <reader|writer|owner> [--solo]");
+const soloYo = flags.includes("--solo");
+const notificar = flags.includes("--notificar");
+const claves = CALENDARIOS.map((c) => c.key);
+
+if (!email || !["reader", "writer", "owner"].includes(rol) || (key && !claves.includes(key))) {
+  console.error("Uso: node src/share.js <email> <reader|writer|owner> [KEY] [--solo] [--notificar]");
+  console.error("KEY posibles:", claves.join(", "));
   process.exit(1);
 }
 
 async function main() {
   const cal = calendarClient();
-  for (const c of CALENDARIOS) {
+  const objetivo = key ? CALENDARIOS.filter((c) => c.key === key) : CALENDARIOS;
+
+  for (const c of objetivo) {
     const calendarId = calendarIdFor(c.key);
     if (!calendarId) { console.log(`— ${c.nombre}: sin ID en el .env, salteo.`); continue; }
 
-    // Dar acceso a la persona.
     await cal.acl.insert({
       calendarId,
       requestBody: { role: rol, scope: { type: "user", value: email } },
-      sendNotifications: false,
+      sendNotifications: notificar,
     });
 
-    // Opcional: quitar el acceso público (la regla scope "default").
     if (soloYo) {
       try {
         await cal.acl.delete({ calendarId, ruleId: "default" });
@@ -40,9 +56,9 @@ async function main() {
       }
     }
 
-    console.log(`✔︎ ${c.nombre}: ${email} → ${rol}${soloYo ? " · público quitado" : ""}`);
+    console.log(`✔︎ ${c.nombre}: ${email} → ${rol}${soloYo ? " · público quitado" : ""}${notificar ? " · notificado" : ""}`);
   }
-  console.log(`\n✅ Listo. Revisá tu Google Calendar: los calendarios "Winclap · ..." deberían aparecer en tu lista.`);
+  console.log(`\n✅ Listo.`);
 }
 
 main().catch((err) => {

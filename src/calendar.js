@@ -33,10 +33,24 @@ async function conReintento(fn, intentos = 5) {
 
 const opts = { timeout: 30000 }; // 30s por request: falla rápido y reintenta
 
-// Crea un evento nuevo (con su id determinístico).
+// Crea un evento nuevo. Si el id ya existe en Google (p. ej. un evento borrado
+// que todavía recuerda), cae a actualizar para no romper.
 export async function crearEvento(calendarId, event) {
   const cal = calendarClient();
-  await conReintento(() => cal.events.insert({ calendarId, requestBody: event }, opts));
+  await conReintento(async () => {
+    try {
+      await cal.events.insert({ calendarId, requestBody: event }, opts);
+    } catch (err) {
+      if (err?.code === 409) {
+        await cal.events.update(
+          { calendarId, eventId: event.id, requestBody: { ...event, status: "confirmed" } },
+          opts
+        );
+        return;
+      }
+      throw err;
+    }
+  });
 }
 
 // Actualiza un evento existente.

@@ -60,9 +60,10 @@ export const COLUMNAS = {
 // Valores de la columna Status que cuentan como persona activa (se incluye).
 export const STATUS_ACTIVO = ["activo", "active"];
 
-// Ventana (en días) alrededor de hoy para crear eventos de aniversario.
-// Evita llenar el calendario con hitos de hace años; el cron diario va sumando.
-export const VENTANA_ANIVERSARIO_DIAS = { atras: 30, adelante: 400 };
+// Hasta cuántos días hacia adelante se crean los aniversarios (además de todos
+// los del año en curso, aunque ya hayan pasado). Evita llenar el calendario con
+// hitos de años anteriores; el cron diario va sumando los que se acercan.
+export const VENTANA_ANIVERSARIO_DIAS = { adelante: 400 };
 
 export const TIMEZONE = process.env.TIMEZONE || "America/Argentina/Buenos_Aires";
 export const SHEET_ID = process.env.NOMINA_SHEET_ID;

@@ -56,12 +56,14 @@ export function eventosDePersona(persona, hoy = new Date()) {
   if (persona.ingreso) {
     const { year, month, day } = persona.ingreso;
     const hoyISO = fechaISO(hoy.getUTCFullYear(), hoy.getUTCMonth() + 1, hoy.getUTCDate());
+    const inicioAnioISO = fechaISO(anioActual, 1, 1);
     for (const hito of HITOS_ANIVERSARIO) {
       const anioEvento = year + hito;
       const fecha = fechaISO(anioEvento, month, day);
       const delta = diasEntre(hoyISO, fecha);
-      // Solo creamos hitos dentro de la ventana relevante (el cron va sumando).
-      if (delta < -VENTANA_ANIVERSARIO_DIAS.atras || delta > VENTANA_ANIVERSARIO_DIAS.adelante) continue;
+      // Mostramos todos los aniversarios de este año (aunque ya hayan pasado) +
+      // los próximos ~400 días. Descartamos el resto (el cron los va sumando).
+      if (fecha < inicioAnioISO || delta > VENTANA_ANIVERSARIO_DIAS.adelante) continue;
       const event = {
         id: eventId("b", "aniv", persona.email || persona.nombre, hito),
         summary: `🎉 ${hito} ${hito === 1 ? "año" : "años"} de ${persona.nombre} en Winclap`,
