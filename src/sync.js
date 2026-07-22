@@ -3,7 +3,8 @@
 // tocando SOLO lo que cambió (crear / actualizar / borrar), no todo.
 import { CALENDARIOS, calendarIdFor } from "./config.js";
 import { leerNomina } from "./sheet.js";
-import { eventosDePersona } from "./events.js";
+import { leerAltas } from "./altas.js";
+import { eventosDePersona, eventosDeAlta } from "./events.js";
 import { crearEvento, actualizarEvento, leerEventosGenerados, borrarEvento } from "./calendar.js";
 
 const DRY = process.argv.includes("--dry-run");
@@ -61,16 +62,20 @@ async function main() {
   console.log(`\n🔄 Sync ${DRY ? "(DRY-RUN, no escribe nada)" : ""} — ${hoy.toISOString().slice(0, 10)}\n`);
 
   const { personas, avisos } = await leerNomina();
-  console.log(`📋 Nómina: ${personas.length} personas leídas.`);
+  const { altas, avisos: avisosAltas } = await leerAltas();
+  console.log(`📋 Nómina: ${personas.length} personas · Altas: ${altas.length} ingresos.`);
+  avisos.push(...avisosAltas);
 
   // Calcular eventos deseados, agrupados por calendario.
   const deseadosPorCalendario = new Map(); // key -> Map(eventId -> event)
-  for (const persona of personas) {
-    for (const { calendarKey, event } of eventosDePersona(persona, hoy)) {
+  const agregar = (lista) => {
+    for (const { calendarKey, event } of lista) {
       if (!deseadosPorCalendario.has(calendarKey)) deseadosPorCalendario.set(calendarKey, new Map());
       deseadosPorCalendario.get(calendarKey).set(event.id, event);
     }
-  }
+  };
+  for (const persona of personas) agregar(eventosDePersona(persona, hoy));
+  for (const alta of altas) agregar(eventosDeAlta(alta, hoy));
 
   // Procesar los calendarios en paralelo (cada uno hace su diff).
   const resultados = await Promise.all(

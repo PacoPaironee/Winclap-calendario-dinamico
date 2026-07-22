@@ -74,7 +74,7 @@ export async function leerEventosGenerados(calendarId) {
       )
     );
     for (const ev of data.items || []) {
-      if (/^[ab][0-9a-f]{40}$/.test(ev.id || "")) mapa.set(ev.id, ev);
+      if (/^[abc][0-9a-f]{40}$/.test(ev.id || "")) mapa.set(ev.id, ev);
     }
     pageToken = data.nextPageToken;
   } while (pageToken);

@@ -60,6 +60,18 @@ export const COLUMNAS = {
 // Valores de la columna Status que cuentan como persona activa (se incluye).
 export const STATUS_ACTIVO = ["activo", "active"];
 
+// Mapeo de columnas de la pestaña ALTAS (ingresos nuevos).
+export const COLUMNAS_ALTAS = {
+  nombre:        ["nombre", "name"],
+  emailWinclap:  ["correo winclap", "mail winclap", "email winclap"],
+  emailPersonal: ["correo personal", "mail personal"],
+  comunidad:     ["comunidad", "clapbase", "community", "sede"],
+  fechaIngreso:  ["fecha ingreso", "fecha de ingreso", "start date"],
+  rol:           ["rol", "role", "puesto"],
+  team:          ["team", "equipo"],
+  area:          ["area", "área"],
+};
+
 // Hasta cuántos días hacia adelante se crean los aniversarios (además de todos
 // los del año en curso, aunque ya hayan pasado). Evita llenar el calendario con
 // hitos de años anteriores; el cron diario va sumando los que se acercan.
@@ -69,6 +81,8 @@ export const TIMEZONE = process.env.TIMEZONE || "America/Argentina/Buenos_Aires"
 export const SHEET_ID = process.env.NOMINA_SHEET_ID;
 // Rango de celdas. Si no incluye "!", se le antepone la primera pestaña automáticamente.
 export const SHEET_RANGE = process.env.NOMINA_RANGE || "A1:AZ2000";
+// Altas: viven en la pestaña "ALTAS" del mismo Sheet espejo (ya compartido).
+export const ALTAS_RANGE = process.env.ALTAS_RANGE || "ALTAS!A1:AZ2000";
 
 export function calendarIdFor(clapbaseKey) {
   return process.env[`CAL_${clapbaseKey}`] || "";
